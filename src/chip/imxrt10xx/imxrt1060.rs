@@ -33,6 +33,7 @@ pub(crate) mod ccm {
         pub mod pll7;
     }
 
+    /// FlexCAN clock
     pub mod can_clk;
 
     /// Re-exported by the common clock_gate module.
