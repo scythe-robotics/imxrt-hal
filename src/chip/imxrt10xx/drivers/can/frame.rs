@@ -128,6 +128,8 @@ impl Frame {
         }
     }
 
+    /// Returns the raw FlexCAN mailbox code register associated with
+    /// the frame.
     pub fn code(&self) -> CodeReg {
         self.code
     }
