@@ -227,7 +227,7 @@ impl FlexCanMailboxCSCode {
 /// Code Register of a FlexCAN mailbox.
 ///
 /// Contains info relating to the frame's remote status (RTR), whether
-/// the frams is standard os extended (IDE), the length of the data
+/// the frame is standard or extended (IDE), the length of the data
 /// content (DLC), and the timestamp.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CodeReg(u32);
