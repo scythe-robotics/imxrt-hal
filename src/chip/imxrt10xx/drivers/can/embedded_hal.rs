@@ -63,7 +63,7 @@ impl embedded_can::Frame for Frame {
 
     #[inline]
     fn is_extended(&self) -> bool {
-        self.is_extended()
+        self.code.is_extended()
     }
 
     #[inline]
