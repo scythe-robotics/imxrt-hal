@@ -372,6 +372,7 @@ impl<P, const M: u8> CAN<P, M> {
 
     /// Write bit to [`IMASK1`](imxrt_ral::can::RegisterBlock::IMASK1) register indicating masked mailbox interrupt
     fn write_imask_bit(&mut self, mailbox_number: u8, value: bool) {
+        log::info!("writing imask_bit: {} to mailbox {}", value, mailbox_number);
         if mailbox_number < 32 {
             modify_reg!(ral::can, self.reg, IMASK1, |reg| reg
                 | (value as u32) << mailbox_number)
@@ -395,6 +396,7 @@ impl<P, const M: u8> CAN<P, M> {
 
     /// Write value to [`IMASK1`](imxrt_ral::can::RegisterBlock::IMASK1) / [`IMASK2`](imxrt_ral::can::RegisterBlock::IMASK2) registers
     fn write_imask(&mut self, value: u64) {
+        log::info!("writing imask: {:#x}", value);
         write_reg!(ral::can, self.reg, IMASK1, value as u32);
         write_reg!(ral::can, self.reg, IMASK2, (value >> 32) as u32);
     }
@@ -866,13 +868,36 @@ impl<P, const M: u8> CAN<P, M> {
         let mut cycle_limit: u8 = 3;
         let offset = self.mailbox_offset();
         let max_mailbox = self.get_max_mailbox();
+        log::info!("max_mailbox: {}", max_mailbox);
+        log::info!(
+            "starting mailbox_reader_index: {}",
+            self._mailbox_reader_index
+        );
+        log::info!("offset: {}", offset);
+
         while self._mailbox_reader_index <= max_mailbox {
+            log::info!(
+                "checking mailbox_reader_index: {}",
+                self._mailbox_reader_index
+            );
+            log::info!(
+                "mailbox code: {:?}",
+                FlexCanMailboxCSCode::from_code_reg(
+                    self.read_mailbox_code(self._mailbox_reader_index)
+                )
+            );
             iflag = self.read_iflag();
+            log::info!("iflag: {:#x}", iflag);
             if iflag != 0 && (self._mailbox_reader_index >= (64 - iflag.leading_zeros() as u8)) {
                 /* break from MSB's if unset, add 1 to prevent undefined behaviour in clz for 0 check */
                 self._mailbox_reader_index = self.mailbox_offset();
+                log::info!(
+                    "resetting _mailbox_reader_index to {}",
+                    self._mailbox_reader_index
+                );
                 cycle_limit -= 1;
                 if cycle_limit == 0 {
+                    log::info!("returning None because cycle_limit == 0");
                     return None;
                 }
             }
@@ -885,20 +910,32 @@ impl<P, const M: u8> CAN<P, M> {
             }
             if self._mailbox_reader_index >= max_mailbox {
                 self._mailbox_reader_index = self.mailbox_offset();
+                log::info!(
+                    "mailbox_reader_index > max_mailbox, resetting to {}",
+                    self._mailbox_reader_index
+                );
                 cycle_limit -= 1;
                 if cycle_limit == 0 {
+                    log::info!("returning None because cycle_limit == 0");
                     return None;
                 }
             }
             if (self.read_imask() & (1_u64 << self._mailbox_reader_index)) != 0 {
+                log::info!("mailbox has its imask bit set, skipping");
                 self._mailbox_reader_index += 1;
                 continue; /* don't read interrupt enabled mailboxes */
             }
             if let Some(mailbox_data) = self.read_mailbox(self._mailbox_reader_index) {
+                log::info!("read_mailbox returned Some");
                 return Some(mailbox_data);
             }
             self._mailbox_reader_index += 1;
+            log::info!(
+                "incrementing mailbox_reader_index to {}",
+                self._mailbox_reader_index
+            );
         }
+        log::info!("returning None because mailbox_reader_index > max_mailbox");
         None
     }
 

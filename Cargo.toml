@@ -15,6 +15,9 @@ license = { workspace = true }
 edition = { workspace = true }
 version = "0.5.6"
 
+[dependencies]
+log = { version = "0.4" }
+
 [dependencies.cfg-if]
 version = "1.0"
 
