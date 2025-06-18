@@ -732,12 +732,14 @@ impl<P, const M: u8> CAN<P, M> {
                     data[7 - i] = (data1 >> (8 * i)) as u8;
                 }
 
-                self.write_mailbox(
-                    mailbox_number,
-                    Some(FlexCanMailboxCSCode::RxEmpty.to_code_reg()),
-                    None,
-                    None,
-                );
+                let code = FlexCanMailboxCSCode::RxEmpty.to_code_reg() | 0x0040_0000 | {
+                    if mailbox_number < self.get_max_mailbox() / 4 {
+                        0 // standard frames
+                    } else {
+                        0x0020_0000 // extended frames
+                    }
+                };
+                self.write_mailbox(mailbox_number, Some(code), None, None);
                 read_reg!(ral::can, self.reg, TIMER);
                 self.write_iflag_bit(mailbox_number);
 
