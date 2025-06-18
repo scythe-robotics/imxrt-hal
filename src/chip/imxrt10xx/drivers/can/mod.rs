@@ -434,12 +434,15 @@ impl<P, const M: u8> CAN<P, M> {
                 }
             } else {
                 for i in 0..max_mailbox {
+                    // The first quarter of the Message Buffers are for Rx of Standard frames.
+                    // The second quarter of the Message Buffers are for Rx of Extended frames.
+                    // The second half are for Tx, with interrupts enabled.
                     if i < max_mailbox / 2 {
-                        let code = FlexCanMailboxCSCode::RxEmpty.to_code_reg() | 0x00400000 | {
+                        let code = FlexCanMailboxCSCode::RxEmpty.to_code_reg() | 0x0040_0000 | {
                             if i < max_mailbox / 4 {
-                                0
+                                0 // standard frames
                             } else {
-                                0x00200000
+                                0x0020_0000 // extended frames
                             }
                         };
                         this.write_mailbox(i, Some(code), None, None);
