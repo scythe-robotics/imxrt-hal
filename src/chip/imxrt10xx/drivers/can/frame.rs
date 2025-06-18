@@ -162,7 +162,7 @@ pub enum FlexCanMailboxCSCode {
     RxEmpty = 0b0100,
     /// MB is full
     RxFull = 0b0010,
-    /// MB is being overwreitten into a full buffer
+    /// MB is being overwritten into a full buffer
     RxOverrun = 0b0110,
     /// A frame was configured to recognize a Remote Request Frame and transmit a Response Frame in return
     RxAnswer = 0b1010,
