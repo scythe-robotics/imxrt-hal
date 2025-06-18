@@ -364,11 +364,9 @@ impl<P, const M: u8> CAN<P, M> {
     /// Write bit to [`IFLAG1`](imxrt_ral::can::RegisterBlock::IFLAG1) / [`IFLAG2`](imxrt_ral::can::RegisterBlock::IFLAG2) register indicating mailbox interrupt
     fn write_iflag_bit(&mut self, mailbox_number: u8) {
         if mailbox_number < 32 {
-            modify_reg!(ral::can, self.reg, IFLAG1, |reg| reg
-                | 1_u32 << mailbox_number)
+            write_reg!(ral::can, self.reg, IFLAG1, 1_u32 << mailbox_number);
         } else {
-            modify_reg!(ral::can, self.reg, IFLAG2, |reg| reg
-                | 1_u32 << (mailbox_number - 32))
+            write_reg!(ral::can, self.reg, IFLAG2, 1_u32 << (mailbox_number - 32));
         }
     }
 
