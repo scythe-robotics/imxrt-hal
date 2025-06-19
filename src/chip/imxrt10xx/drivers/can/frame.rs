@@ -114,7 +114,9 @@ impl Frame {
     /// Returns the Message Buffer Word 0 with the Message Buffer Code set to [`FlexCanMailboxCSCode::TxOnce`] (DATA)
     #[inline(always)]
     pub fn to_tx_once_code(&self) -> u32 {
-        ((self.dlc() as u32) << CodeReg::DLC_SHIFT) | FlexCanMailboxCSCode::TxOnce.to_code_reg()
+        ((self.dlc() as u32) << CodeReg::DLC_SHIFT)
+            | ((self.code.is_extended() as u32) << CodeReg::IDE_SHIFT)
+            | FlexCanMailboxCSCode::TxOnce.to_code_reg()
     }
 
     /// Returns the frame data (0..8 bytes in length) if this is a data frame.
