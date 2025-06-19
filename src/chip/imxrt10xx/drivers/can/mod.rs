@@ -363,11 +363,14 @@ impl<P, const M: u8> CAN<P, M> {
 
     /// Write bit to [`IFLAG1`](imxrt_ral::can::RegisterBlock::IFLAG1) / [`IFLAG2`](imxrt_ral::can::RegisterBlock::IFLAG2) register indicating mailbox interrupt
     fn write_iflag_bit(&mut self, mailbox_number: u8) {
+        log::info!("writing iflag_bit for mailbox {}", mailbox_number);
+        log::info!("    old iflag: {:#x}", self.read_iflag());
         if mailbox_number < 32 {
             write_reg!(ral::can, self.reg, IFLAG1, 1_u32 << mailbox_number);
         } else {
             write_reg!(ral::can, self.reg, IFLAG2, 1_u32 << (mailbox_number - 32));
         }
+        log::info!("    new iflag: {:#x}", self.read_iflag());
     }
 
     /// Write bit to [`IMASK1`](imxrt_ral::can::RegisterBlock::IMASK1) register indicating masked mailbox interrupt
@@ -697,6 +700,7 @@ impl<P, const M: u8> CAN<P, M> {
     #[inline(always)]
     fn read_mailbox(&mut self, mailbox_number: u8) -> Option<MailboxData> {
         if (self.read_imask() & (1_u64 << mailbox_number)) != 0 {
+            // This MB is handled through interrupts, do not handle here.
             return None;
         }
 
@@ -743,6 +747,7 @@ impl<P, const M: u8> CAN<P, M> {
                 };
                 self.write_mailbox(mailbox_number, Some(code), None, None);
                 read_reg!(ral::can, self.reg, TIMER);
+                log::info!("read_mailbox({}) calling write_iflag_bit()", mailbox_number);
                 self.write_iflag_bit(mailbox_number);
 
                 match Frame::new_from_raw_slice(code, id, &data[..dlc as usize]) {
@@ -812,6 +817,11 @@ impl<P, const M: u8> CAN<P, M> {
     #[inline(always)]
     fn write_tx_mailbox(&mut self, mailbox_number: u8, frame: &Frame) {
         // Check if the respective interruption bit is set and clear it.
+        log::info!(
+            "write_tx_mailbox(mb={}, frame={:?}) calling write_iflag_bit()",
+            mailbox_number,
+            frame
+        );
         self.write_iflag_bit(mailbox_number);
         self.write_mailbox(
             mailbox_number,
@@ -825,6 +835,7 @@ impl<P, const M: u8> CAN<P, M> {
             Some(frame.id.to_id_reg()),
             Some(frame.data.bytes),
         );
+
         self.write_mailbox(mailbox_number, Some(frame.to_tx_once_code()), None, None);
     }
 
@@ -944,6 +955,7 @@ impl<P, const M: u8> CAN<P, M> {
     /// If DMA is enabled, the FIFO can't be handled in the ISR
     #[inline(always)]
     pub fn handle_interrupt(&mut self) -> Option<MailboxData> {
+        log::info!("handle_interrupt()");
         let imask = self.read_imask();
         let iflag = self.read_iflag();
 
