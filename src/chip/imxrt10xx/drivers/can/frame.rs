@@ -114,7 +114,9 @@ impl Frame {
     /// Returns the Message Buffer Word 0 with the Message Buffer Code set to [`FlexCanMailboxCSCode::TxOnce`] (DATA)
     #[inline(always)]
     pub fn to_tx_once_code(&self) -> u32 {
-        ((self.dlc() as u32) << CodeReg::DLC_SHIFT) | FlexCanMailboxCSCode::TxOnce.to_code_reg()
+        ((self.dlc() as u32) << CodeReg::DLC_SHIFT)
+            | ((self.code.is_extended() as u32) << CodeReg::IDE_SHIFT)
+            | FlexCanMailboxCSCode::TxOnce.to_code_reg()
     }
 
     /// Returns the frame data (0..8 bytes in length) if this is a data frame.
@@ -162,7 +164,7 @@ pub enum FlexCanMailboxCSCode {
     RxEmpty = 0b0100,
     /// MB is full
     RxFull = 0b0010,
-    /// MB is being overwreitten into a full buffer
+    /// MB is being overwritten into a full buffer
     RxOverrun = 0b0110,
     /// A frame was configured to recognize a Remote Request Frame and transmit a Response Frame in return
     RxAnswer = 0b1010,
@@ -314,8 +316,7 @@ impl CodeReg {
     /// Returns `true` if the code reg is an extended identifier.
     #[inline(always)]
     pub fn is_extended(self) -> bool {
-        // self.0 & Self::IDE_MASK != 0
-        self.0 & (1 << 21) != 0
+        self.0 & Self::IDE_MASK != 0
     }
 
     /// Returns `true` if the code reg is a standard identifier.

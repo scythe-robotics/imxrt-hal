@@ -364,11 +364,9 @@ impl<P, const M: u8> CAN<P, M> {
     /// Write bit to [`IFLAG1`](imxrt_ral::can::RegisterBlock::IFLAG1) / [`IFLAG2`](imxrt_ral::can::RegisterBlock::IFLAG2) register indicating mailbox interrupt
     fn write_iflag_bit(&mut self, mailbox_number: u8) {
         if mailbox_number < 32 {
-            modify_reg!(ral::can, self.reg, IFLAG1, |reg| reg
-                | 1_u32 << mailbox_number)
+            write_reg!(ral::can, self.reg, IFLAG1, 1_u32 << mailbox_number);
         } else {
-            modify_reg!(ral::can, self.reg, IFLAG2, |reg| reg
-                | 1_u32 << (mailbox_number - 32))
+            write_reg!(ral::can, self.reg, IFLAG2, 1_u32 << (mailbox_number - 32));
         }
     }
 
@@ -434,12 +432,15 @@ impl<P, const M: u8> CAN<P, M> {
                 }
             } else {
                 for i in 0..max_mailbox {
+                    // The first quarter of the Message Buffers are for Rx of Standard frames.
+                    // The second quarter of the Message Buffers are for Rx of Extended frames.
+                    // The second half are for Tx, with interrupts enabled.
                     if i < max_mailbox / 2 {
-                        let code = FlexCanMailboxCSCode::RxEmpty.to_code_reg() | 0x00400000 | {
+                        let code = FlexCanMailboxCSCode::RxEmpty.to_code_reg() | 0x0040_0000 | {
                             if i < max_mailbox / 4 {
-                                0
+                                0 // standard frames
                             } else {
-                                0x00200000
+                                0x0020_0000 // extended frames
                             }
                         };
                         this.write_mailbox(i, Some(code), None, None);
@@ -731,12 +732,14 @@ impl<P, const M: u8> CAN<P, M> {
                     data[7 - i] = (data1 >> (8 * i)) as u8;
                 }
 
-                self.write_mailbox(
-                    mailbox_number,
-                    Some(FlexCanMailboxCSCode::RxEmpty.to_code_reg()),
-                    None,
-                    None,
-                );
+                let code = FlexCanMailboxCSCode::RxEmpty.to_code_reg() | 0x0040_0000 | {
+                    if mailbox_number < self.get_max_mailbox() / 4 {
+                        0 // standard frames
+                    } else {
+                        0x0020_0000 // extended frames
+                    }
+                };
+                self.write_mailbox(mailbox_number, Some(code), None, None);
                 read_reg!(ral::can, self.reg, TIMER);
                 self.write_iflag_bit(mailbox_number);
 
